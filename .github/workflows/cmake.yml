@@ -1,8 +1,13 @@
-name: CMake
+name: Build Release
 
 on:
-  workflow_dispatch:
   push:
+    branches: [ main, master ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
 
 env:
   BUILD_TYPE: Release
@@ -10,33 +15,107 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     strategy:
-      fail-fast: false
       matrix:
-        abi: ["x86_64", "arm64-v8a" ]
-        include:
-        - abi: x86_64
-          ndktarget: x86_64-linux-android-
-        - abi: arm64-v8a
-          openssltarget: android-arm64
-          ndktarget: aarch64-linux-android-
+        abi: [x86_64, arm64-v8a]
+
     steps:
-    - run: sudo apt update && sudo apt install llvm gcc ninja-build
-    - uses: actions/checkout@v3
+    # ============================================
+    # Checkout do código
+    # ============================================
+    - name: Checkout repository
+      uses: actions/checkout@v4
       with:
-        submodules: 'true'
-    - uses: nttld/setup-ndk@v1
+        submodules: recursive
+
+    # ============================================
+    # Setup Android NDK
+    # ============================================
+    - name: Setup Android NDK
+      uses: nttld/setup-ndk@v1
       id: setup-ndk
       with:
         ndk-version: r27c
-        add-to-path: true
+        add-to-path: false
+        local-cache: true
 
-    - name: Configure
-      run: cmake -B ${{github.workspace}}/build -G Ninja -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake -DANDROID_ABI=${{ matrix.abi }} "-DCMAKE_C_FLAGS=-Wl,--strip-all"
-    - name: Build
-      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} --target mcpelauncherpaneltest
-    
-    - uses: actions/upload-artifact@v4
+    # ============================================
+    # Setup CMake
+    # ============================================
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2
       with:
-        name: panel-test-${{ matrix.abi }}
-        path: build/libmcpelauncherpaneltest.so
+        cmake-version: '3.22.1'
+
+    # ============================================
+    # Build
+    # ============================================
+    - name: Configure CMake
+      run: |
+        cmake -B build/${{ matrix.abi }} \
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          -DCMAKE_ANDROID_ARCH_ABI=${{ matrix.abi }} \
+          -DCMAKE_ANDROID_NDK=${{ steps.setup-ndk.outputs.ndk-path }} \
+          -DCMAKE_SYSTEM_NAME=Android \
+          -DCMAKE_SYSTEM_VERSION=21 \
+          -DCMAKE_ANDROID_STL_TYPE=c++_static \
+          -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
+          -DANDROID_ABI=${{ matrix.abi }} \
+          -DANDROID_PLATFORM=android-21 \
+          -DANDROID_STL=c++_static \
+          -G Ninja
+      env:
+        ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+
+    - name: Build
+      run: cmake --build build/${{ matrix.abi }} --config ${{ env.BUILD_TYPE }} -j$(nproc)
+
+    # ============================================
+    # Upload artifact
+    # ============================================
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: mcpelauncherpaneltest-${{ matrix.abi }}
+        path: build/${{ matrix.abi }}/libmcpelauncherpaneltest.so
+
+    # ============================================
+    # Release (apenas em tags)
+    # ============================================
+    - name: Upload to Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v2
+      with:
+        files: build/${{ matrix.abi }}/libmcpelauncherpaneltest.so
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  # ============================================
+  # Job para criar release com múltiplas ABIs
+  # ============================================
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts/
+
+    - name: Create release archive
+      run: |
+        mkdir -p release/libs/x86_64
+        mkdir -p release/libs/arm64-v8a
+        cp artifacts/mcpelauncherpaneltest-x86_64/libmcpelauncherpaneltest.so release/libs/x86_64/
+        cp artifacts/mcpelauncherpaneltest-arm64-v8a/libmcpelauncherpaneltest.so release/libs/arm64-v8a/
+        cd release && zip -r ../mcpelauncherpaneltest-${{ github.ref_name }}.zip libs/
+
+    - name: Upload release archive
+      uses: softprops/action-gh-release@v2
+      with:
+        files: mcpelauncherpaneltest-${{ github.ref_name }}.zip
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
