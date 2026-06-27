@@ -30,16 +30,14 @@ jobs:
       with:
         ndk-version: r27c
         add-to-path: true
-    - uses: actions/checkout@v2
-     
- 
+
     - name: Configure
       run: cmake -B ${{github.workspace}}/build -G Ninja -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake -DANDROID_ABI=${{ matrix.abi }} "-DCMAKE_C_FLAGS=-Wl,--strip-all"
     - name: Build
-      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} --target mcpelauncherenvironmentchanger
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} --target mcpelauncherpaneltest
     
     - uses: actions/upload-artifact@v4
       with:
-        name: environment-changer-${{format('android-{0}', matrix.abi)}}
+        name: panel-test-${{format('android-{0}', matrix.abi)}}
         path: |
-          build/libmcpelauncherenvironmentchanger.so
+          build/libmcpelauncherpaneltest.so
