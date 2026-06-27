@@ -1,8 +1,11 @@
-name: CMake
+name: Build Release
 
 on:
-  workflow_dispatch:
   push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:
 
 env:
   BUILD_TYPE: Release
@@ -10,35 +13,90 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+
     strategy:
-      fail-fast: false
       matrix:
-        abi: ["x86_64", "arm64-v8a" ]
-        include:
-        - abi: x86_64
-          ndktarget: x86_64-linux-android-
-        - abi: arm64-v8a
-          openssltarget: android-arm64
-          ndktarget: aarch64-linux-android-
+        abi: [x86_64, arm64-v8a]
+
     steps:
-    - run: sudo apt update && sudo apt install llvm gcc ninja-build
-    - uses: actions/checkout@v3
+    - name: Checkout repository
+      uses: actions/checkout@v4
       with:
-        submodules: 'true'
-    - uses: nttld/setup-ndk@v1
+        submodules: recursive
+
+    - name: Setup Android NDK
+      uses: nttld/setup-ndk@v1
       id: setup-ndk
       with:
         ndk-version: r27c
-        add-to-path: true
+        add-to-path: false
+        local-cache: true
 
-    - name: Configure
-      run: cmake -B ${{github.workspace}}/build -G Ninja -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake -DANDROID_ABI=${{ matrix.abi }} "-DCMAKE_C_FLAGS=-Wl,--strip-all"
-    
-    - name: Build
-      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} --target mcpelauncherpaneltest
-    
-    - uses: actions/upload-artifact@v4
+    - name: Setup CMake
+      uses: jwlawson/actions-setup-cmake@v2
       with:
-        name: panel-test-${{format('android-{0}', matrix.abi)}}
-        path: |
-          build/libmcpelauncherpaneltest.so
+        cmake-version: '3.22.1'
+
+    - name: Configure CMake
+      run: |
+        cmake -B build/${{ matrix.abi }} \
+          -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
+          -DCMAKE_ANDROID_ARCH_ABI=${{ matrix.abi }} \
+          -DCMAKE_ANDROID_NDK=${{ steps.setup-ndk.outputs.ndk-path }} \
+          -DCMAKE_SYSTEM_NAME=Android \
+          -DCMAKE_SYSTEM_VERSION=21 \
+          -DCMAKE_ANDROID_STL_TYPE=c++_static \
+          -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake \
+          -DANDROID_ABI=${{ matrix.abi }} \
+          -DANDROID_PLATFORM=android-21 \
+          -DANDROID_STL=c++_static \
+          -G Ninja
+      env:
+        ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
+
+    - name: Build
+      run: cmake --build build/${{ matrix.abi }} --config ${{ env.BUILD_TYPE }} -j$(nproc)
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: mcpelauncherpaneltest-${{ matrix.abi }}
+        path: build/${{ matrix.abi }}/libmcpelauncherpaneltest.so
+
+    - name: Upload to Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: latest
+        name: "Latest Build"
+        files: build/${{ matrix.abi }}/libmcpelauncherpaneltest.so
+        make_latest: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts/
+
+    - name: Create release archive
+      run: |
+        mkdir -p release/libs/x86_64
+        mkdir -p release/libs/arm64-v8a
+        cp artifacts/mcpelauncherpaneltest-x86_64/libmcpelauncherpaneltest.so release/libs/x86_64/
+        cp artifacts/mcpelauncherpaneltest-arm64-v8a/libmcpelauncherpaneltest.so release/libs/arm64-v8a/
+        cd release && zip -r ../mcpelauncherpaneltest-latest.zip libs/
+
+    - name: Upload release archive
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: latest
+        name: "Latest Build"
+        files: mcpelauncherpaneltest-latest.zip
+        make_latest: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
