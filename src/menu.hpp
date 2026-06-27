@@ -11,7 +11,7 @@ struct MenuEntryABI {
 };
 
 struct ControlABI {
-    int type = 0; // button
+    int type = 0;
     union {
         struct {
             const char* label;
