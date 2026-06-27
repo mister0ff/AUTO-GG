@@ -18,7 +18,6 @@ struct ControlABI {
             void*       user;
             void (*onClick)(void* user);
         } button;
-
         struct {
             const char* label;
             int         min;
@@ -27,7 +26,6 @@ struct ControlABI {
             void*       user;
             void (*onChange)(void* user, int value);
         } sliderint;
-
         struct {
             const char* label;
             float       min;
@@ -36,12 +34,10 @@ struct ControlABI {
             void*       user;
             void (*onChange)(void* user, float value);
         } sliderfloat;
-
         struct {
             const char* label;
-            int         size; // 0 normal, 1 small title...
+            int         size;
         } text;
-
         struct {
             const char* label;
             const char* def;
