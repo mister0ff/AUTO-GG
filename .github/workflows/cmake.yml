@@ -3,6 +3,8 @@ name: CMake
 on:
   workflow_dispatch:
   push:
+    tags:
+      - 'v*'
 
 env:
   BUILD_TYPE: Release
@@ -36,8 +38,21 @@ jobs:
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} --target mcpelauncherpaneltest
     
+    - name: Rename artifact
+      run: |
+        mkdir -p ${{github.workspace}}/artifacts
+        cp ${{github.workspace}}/build/libmcpelauncherpaneltest.so ${{github.workspace}}/artifacts/libmcpelauncherpaneltest-${{ matrix.abi }}.so
+
     - uses: actions/upload-artifact@v4
       with:
-        name: panel-test-${{format('android-{0}', matrix.abi)}}
-        path: |
-          build/libmcpelauncherpaneltest.so
+        name: panel-test-${{ matrix.abi }}
+        path: ${{github.workspace}}/artifacts/*.so
+        compression-level: 0  # ← Sem compressão! .so direto no zip
+
+    - name: Upload to Release
+      if: startsWith(github.ref, 'refs/tags/')
+      uses: softprops/action-gh-release@v1
+      with:
+        files: ${{github.workspace}}/artifacts/*.so
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
