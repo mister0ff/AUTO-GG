@@ -33,6 +33,12 @@ jobs:
         add-to-path: true
         local-cache: true
 
+    - name: Find NDK compiler
+      run: |
+        echo "NDK PATH: ${{ steps.setup-ndk.outputs.ndk-path }}"
+        find ${{ steps.setup-ndk.outputs.ndk-path }} -name "clang" -type f | head -5
+        find ${{ steps.setup-ndk.outputs.ndk-path }} -name "clang++" -type f | head -5
+
     - name: Setup CMake
       uses: jwlawson/actions-setup-cmake@v2
       with:
@@ -40,6 +46,8 @@ jobs:
 
     - name: Configure CMake
       run: |
+        export CC="${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/clang"
+        export CXX="${{ steps.setup-ndk.outputs.ndk-path }}/toolchains/llvm/prebuilt/linux-x86_64/bin/clang++"
         cmake -B build/${{ matrix.abi }} \
           -DCMAKE_BUILD_TYPE=${{ env.BUILD_TYPE }} \
           -DCMAKE_ANDROID_ARCH_ABI=${{ matrix.abi }} \
@@ -51,6 +59,8 @@ jobs:
           -DANDROID_ABI=${{ matrix.abi }} \
           -DANDROID_PLATFORM=android-21 \
           -DANDROID_STL=c++_static \
+          -DCMAKE_C_COMPILER=$CC \
+          -DCMAKE_CXX_COMPILER=$CXX \
           -G Ninja
       env:
         ANDROID_NDK_HOME: ${{ steps.setup-ndk.outputs.ndk-path }}
