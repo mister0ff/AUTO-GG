@@ -9,7 +9,6 @@ extern "C" [[gnu::visibility("default")]] void mod_preinit() {
 }
 
 extern "C" [[gnu::visibility("default")]] void mod_init() {
-    // Painel simples com 2 botões teste
     MenuEntryABI testEntries[2];
 
     testEntries[0] = {
