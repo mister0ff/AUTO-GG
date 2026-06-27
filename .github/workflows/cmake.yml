@@ -1,5 +1,4 @@
 name: CMake
- 
 
 on:
   workflow_dispatch:
@@ -48,7 +47,6 @@ jobs:
       with:
         name: panel-test-${{ matrix.abi }}
         path: ${{github.workspace}}/artifacts/*.so
-        compression-level: 0  # ← Sem compressão! .so direto no zip
 
     - name: Upload to Release
       if: startsWith(github.ref, 'refs/tags/')
