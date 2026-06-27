@@ -33,6 +33,7 @@ jobs:
 
     - name: Configure
       run: cmake -B ${{github.workspace}}/build -G Ninja -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DCMAKE_TOOLCHAIN_FILE=${{ steps.setup-ndk.outputs.ndk-path }}/build/cmake/android.toolchain.cmake -DANDROID_ABI=${{ matrix.abi }} "-DCMAKE_C_FLAGS=-Wl,--strip-all"
+    
     - name: Build
       run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}} --target mcpelauncherpaneltest
     
