@@ -27,7 +27,7 @@ extern "C" [[gnu::visibility("default")]] void mod_init() {
 
     MenuEntryABI menuEntry{
         .name       = "Test Panel",
-        .length     = std::size(testEntries),
+        .length     = 2,  // ← FIXADO: array tem 2 elementos
         .subentries = testEntries,
     };
 
