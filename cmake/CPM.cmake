@@ -29,7 +29,7 @@ jobs:
       id: setup-ndk
       with:
         ndk-version: r27c
-        add-to-path: false
+        add-to-path: true
         local-cache: true
 
     - name: Setup CMake
