@@ -1,35 +1,62 @@
-#include "menu.hpp"
+#include <jni.h>
 #include <dlfcn.h>
 
-extern "C" [[gnu::visibility("default")]] void mod_preinit() {
-    auto menuLib = dlopen("libmcpelauncher_menu.so", 0);
-    addMenu      = reinterpret_cast<decltype(addMenu)>(dlsym(menuLib, "mcpelauncher_addmenu"));
-    showWindow   = reinterpret_cast<decltype(showWindow)>(dlsym(menuLib, "mcpelauncher_show_window"));
-    closeWindow  = reinterpret_cast<decltype(closeWindow)>(dlsym(menuLib, "mcpelauncher_close_window"));
+typedef void (*HookCallback)(void*);
+
+class HackPanel {
+private:
+    bool blockFlyEnabled;
+    bool killAuraEnabled;
+    bool espEnabled;
+
+public:
+    HackPanel() : blockFlyEnabled(false), 
+                  killAuraEnabled(false), 
+                  espEnabled(false) {}
+
+    void setBlockFly(bool enabled) { blockFlyEnabled = enabled; }
+    void setKillAura(bool enabled) { killAuraEnabled = enabled; }
+    void setESP(bool enabled) { espEnabled = enabled; }
+
+    bool isBlockFlyEnabled() const { return blockFlyEnabled; }
+    bool isKillAuraEnabled() const { return killAuraEnabled; }
+    bool isESPEnabled() const { return espEnabled; }
+};
+
+// Função para hook do Block Fly
+void hookBlockFly(void* ctx) {
+    static HackPanel panel;
+    if (panel.isBlockFlyEnabled()) {
+        // Lógica de Block Fly
+    }
 }
 
-extern "C" [[gnu::visibility("default")]] void mod_init() {
-    MenuEntryABI testEntries[2];
+// Função para hook do Kill Aura
+void hookKillAura(void* ctx) {
+    static HackPanel panel;
+    if (panel.isKillAuraEnabled()) {
+        // Lógica de Kill Aura
+    }
+}
 
-    testEntries[0] = {
-        .name  = "Test Button 1",
-        .click = [](void*) {
-            // Sem função por enquanto
-        },
-    };
+// Função para hook do ESP
+void hookESP(void* ctx) {
+    static HackPanel panel;
+    if (panel.isESPEnabled()) {
+        // Lógica de ESP
+    }
+}
 
-    testEntries[1] = {
-        .name  = "Test Button 2",
-        .click = [](void*) {
-            // Sem função por enquanto
-        },
-    };
+extern "C" JNIEXPORT void JNICALL Java_com_example_MinecraftHack_init(JNIEnv* env, jobject thiz) {
+    void* core = dlopen("libminecraft.so", RTLD_LAZY);
+    if (!core) return;
 
-    MenuEntryABI menuEntry{
-        .name       = "Test Panel",
-        .length     = 2,  // ← FIXADO: array tem 2 elementos
-        .subentries = testEntries,
-    };
+    void* blockFlyHook = dlsym(core, "blockFly");
+    if (blockFlyHook) *(void**)blockFlyHook = (void*)hookBlockFly;
 
-    addMenu(1, &menuEntry);
+    void* killAuraHook = dlsym(core, "killAura");
+    if (killAuraHook) *(void**)killAuraHook = (void*)hookKillAura;
+
+    void* espHook = dlsym(core, "esp");
+    if (espHook) *(void**)espHook = (void*)hookESP;
 }
