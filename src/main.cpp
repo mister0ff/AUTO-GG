@@ -1,62 +1,118 @@
-#include <jni.h>
+// src/main.cpp
 #include <dlfcn.h>
+#include <pthread.h>
+#include <iostream>
+#include <thread>
+#include <vector>
 
-typedef void (*HookCallback)(void*);
+// Estrutura para armazenar dados do jogador
+struct PlayerData {
+    float x, y, z;
+    bool visible;
+};
 
+// Painel de hacks centralizado
 class HackPanel {
 private:
     bool blockFlyEnabled;
     bool killAuraEnabled;
     bool espEnabled;
-
+    std::vector<PlayerData> nearbyPlayers;
+    
 public:
     HackPanel() : blockFlyEnabled(false), 
                   killAuraEnabled(false), 
                   espEnabled(false) {}
-
-    void setBlockFly(bool enabled) { blockFlyEnabled = enabled; }
-    void setKillAura(bool enabled) { killAuraEnabled = enabled; }
-    void setESP(bool enabled) { espEnabled = enabled; }
-
-    bool isBlockFlyEnabled() const { return blockFlyEnabled; }
-    bool isKillAuraEnabled() const { return killAuraEnabled; }
-    bool isESPEnabled() const { return espEnabled; }
+    
+    void enableBlockFly() { blockFlyEnabled = true; }
+    void disableBlockFly() { blockFlyEnabled = false; }
+    
+    void enableKillAura() { killAuraEnabled = true; }
+    void disableKillAura() { killAuraEnabled = false; }
+    
+    void enableESP() { espEnabled = true; }
+    void disableESP() { espEnabled = false; }
+    
+    // Simular coleta de dados de jogadores
+    void collectPlayerData() {
+        nearbyPlayers.clear();
+        
+        // Dados fictícios para demonstração
+        nearbyPlayers.push_back({10.0f, 5.0f, 15.0f, true});
+        nearbyPlayers.push_back({20.0f, 3.0f, 25.0f, true});
+    }
+    
+    // Processar dados dos jogadores
+    void processPlayers() {
+        for (const auto& player : nearbyPlayers) {
+            if (blockFlyEnabled) {
+                std::cout << "Block Fly: Jogador em (" << player.x 
+                         << ", " << player.z << ")\n";
+            }
+            if (killAuraEnabled) {
+                std::cout << "Kill Aura: Atacando jogador em (" << player.x 
+                         << ", " << player.z << ")\n";
+            }
+            if (espEnabled) {
+                std::cout << "ESP: Marcando jogador em (" << player.x 
+                         << ", " << player.z << ")\n";
+            }
+        }
+    }
+    
+    void run() {
+        while (true) {
+            collectPlayerData();
+            processPlayers();
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+    }
 };
 
-// Função para hook do Block Fly
-void hookBlockFly(void* ctx) {
-    static HackPanel panel;
-    if (panel.isBlockFlyEnabled()) {
-        // Lógica de Block Fly
+// Instância global do painel
+static HackPanel* g_panel = nullptr;
+
+// Funções de inicialização e controle
+extern "C" void init() {
+    if (!g_panel) {
+        g_panel = new HackPanel();
+        std::thread t(&HackPanel::run, g_panel);
+        t.detach();
     }
 }
 
-// Função para hook do Kill Aura
-void hookKillAura(void* ctx) {
-    static HackPanel panel;
-    if (panel.isKillAuraEnabled()) {
-        // Lógica de Kill Aura
+extern "C" void enableBlockFly() {
+    if (g_panel) {
+        g_panel->enableBlockFly();
     }
 }
 
-// Função para hook do ESP
-void hookESP(void* ctx) {
-    static HackPanel panel;
-    if (panel.isESPEnabled()) {
-        // Lógica de ESP
+extern "C" void disableBlockFly() {
+    if (g_panel) {
+        g_panel->disableBlockFly();
     }
 }
 
-extern "C" JNIEXPORT void JNICALL Java_com_example_MinecraftHack_init(JNIEnv* env, jobject thiz) {
-    void* core = dlopen("libminecraft.so", RTLD_LAZY);
-    if (!core) return;
+extern "C" void enableKillAura() {
+    if (g_panel) {
+        g_panel->enableKillAura();
+    }
+}
 
-    void* blockFlyHook = dlsym(core, "blockFly");
-    if (blockFlyHook) *(void**)blockFlyHook = (void*)hookBlockFly;
+extern "C" void disableKillAura() {
+    if (g_panel) {
+        g_panel->disableKillAura();
+    }
+}
 
-    void* killAuraHook = dlsym(core, "killAura");
-    if (killAuraHook) *(void**)killAuraHook = (void*)hookKillAura;
+extern "C" void enableESP() {
+    if (g_panel) {
+        g_panel->enableESP();
+    }
+}
 
-    void* espHook = dlsym(core, "esp");
-    if (espHook) *(void**)espHook = (void*)hookESP;
+extern "C" void disableESP() {
+    if (g_panel) {
+        g_panel->disableESP();
+    }
 }
