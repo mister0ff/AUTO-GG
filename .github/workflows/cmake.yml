@@ -13,13 +13,19 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+    - name: Install JDK
+      uses: actions/setup-java@v4
+      with:
+        java-version: '11'
+        distribution: 'temurin'
+        
+    - name: Install build dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential cmake libdl-dev
+        
     - uses: actions/checkout@v4
     
-    - name: Setup CMake
-      uses: jwlawson/actions-setup-cmake@v1
-      with:
-        cmake-version: '3.22'
-        
     - name: Create build directory
       run: mkdir build
       
