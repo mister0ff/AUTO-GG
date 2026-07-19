@@ -13,7 +13,7 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     
     - name: Setup CMake
       uses: jwlawson/actions-setup-cmake@v1
@@ -36,7 +36,7 @@ jobs:
       run: ./test
       
     - name: Upload artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: libminecraft_hack.so
         path: build/libminecraft_hack.so
