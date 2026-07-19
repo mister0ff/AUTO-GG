@@ -24,15 +24,19 @@ jobs:
     - name: Create build directory
       run: mkdir build
       
-    - name: Configure CMake
+    - name: Configure CMake (Release)
       working-directory: ./build
-      run: cmake ..
+      run: cmake .. -DCMAKE_BUILD_TYPE=Release
       
-    - name: Build
+    - name: Build Release
       working-directory: ./build
       run: make
       
-    - name: Upload artifacts
+    - name: Verify Release File
+      working-directory: ./build
+      run: ls -la libminecraft_hack.so
+      
+    - name: Upload Release Artifact
       uses: actions/upload-artifact@v4
       with:
         name: libminecraft_hack.so
