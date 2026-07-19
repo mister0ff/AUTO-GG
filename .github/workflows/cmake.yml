@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-  pull_request: 
+  pull_request:
     branches:
       - main
 
@@ -22,7 +22,7 @@ jobs:
     - name: Install build dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential cmake openjdk-11-jdk openjdk-11-jdk-headless libc6-dev
+        sudo apt-get install -y build-essential cmake openjdk-11-jdk openjdk-11-jdk-headless libc6-dev libdl-dev
         
     - uses: actions/checkout@v4
     
