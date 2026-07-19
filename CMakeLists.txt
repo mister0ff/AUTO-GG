@@ -5,6 +5,10 @@ project(MinecraftHack)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
+# Configuração de release
+set(CMAKE_BUILD_TYPE Release)
+set(CMAKE_CXX_FLAGS_RELEASE "-O3 -DNDEBUG")
+
 # Remover dependência do JNI
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DNO_JNI")
 
@@ -23,3 +27,9 @@ target_link_libraries(minecraft_hack dl pthread)
 # Definir saída do arquivo
 set_target_properties(minecraft_hack PROPERTIES PREFIX "")
 set_target_properties(minecraft_hack PROPERTIES OUTPUT_NAME "minecraft_hack")
+
+# Criar target de release
+add_custom_target(release ALL
+    COMMAND ${CMAKE_COMMAND} --build ${CMAKE_BINARY_DIR} --config Release
+    COMMENT "Buildando versão release"
+)
