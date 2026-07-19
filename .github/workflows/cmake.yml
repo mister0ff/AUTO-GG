@@ -19,20 +19,31 @@ jobs:
         java-version: '11'
         distribution: 'temurin'
         
+    - name: Verify JDK installation
+      run: |
+        ls -la /usr/lib/jvm/
+        find /usr/lib/jvm/ -name "jni.h"
+        
     - name: Install build dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y build-essential cmake openjdk-11-jdk openjdk-11-jdk-headless libc6-dev
+        sudo apt-get install -y build-essential cmake
         
     - uses: actions/checkout@v4
     
     - name: Create build directory
       run: mkdir build
       
-    - name: Configure CMake
+    - name: Configure CMake with JDK paths
       working-directory: ./build
-      run: cmake ..
-      
+      run: |
+        JDK_PATH=$(find /usr/lib/jvm/ -name "include" -type d | head -n 1)
+        if [ ! -z "$JDK_PATH" ]; then
+          cmake .. -DJAVA_INCLUDE_DIR=$JDK_PATH
+        else
+          cmake ..
+        fi
+        
     - name: Build
       working-directory: ./build
       run: make
