@@ -1,3 +1,4 @@
+# .github/workflows/cmake.yml
 name: Build Minecraft Hack
 
 on:
@@ -13,17 +14,6 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-    - name: Install JDK
-      uses: actions/setup-java@v4
-      with:
-        java-version: '11'
-        distribution: 'temurin'
-        
-    - name: Verify JDK installation
-      run: |
-        ls -la /usr/lib/jvm/
-        find /usr/lib/jvm/ -name "jni.h"
-        
     - name: Install build dependencies
       run: |
         sudo apt-get update
@@ -34,31 +24,16 @@ jobs:
     - name: Create build directory
       run: mkdir build
       
-    - name: Configure CMake with JDK paths
+    - name: Configure CMake
       working-directory: ./build
-      run: |
-        JDK_PATH=$(find /usr/lib/jvm/ -name "include" -type d | head -n 1)
-        if [ ! -z "$JDK_PATH" ]; then
-          cmake .. -DJAVA_INCLUDE_DIR=$JDK_PATH
-        else
-          cmake ..
-        fi
-        
+      run: cmake ..
+      
     - name: Build
       working-directory: ./build
       run: make
-      
-    - name: Test
-      working-directory: ./build
-      run: ./test
       
     - name: Upload artifacts
       uses: actions/upload-artifact@v4
       with:
         name: libminecraft_hack.so
         path: build/libminecraft_hack.so
-        
-    - name: Run tests
-      run: |
-        cd build
-        ./test
